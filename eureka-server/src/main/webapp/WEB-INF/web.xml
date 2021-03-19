@@ -4,6 +4,12 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://java.sun.com/xml/ns/javaee
 	http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
+
+  <!--
+  在web.xml中，都会配置一个lister监听器，用来在web项目启动的时候来执行，这个地方代表了整个项目的入口
+  4个filter，url-pattern = /*
+  代表他们是针对所有的外部请求的，都会走一遍这些过滤器的逻辑，在下面有对应的filter-mapping配置
+  -->
   <listener>
     <listener-class>com.netflix.eureka.EurekaBootStrap</listener-class>
   </listener>
@@ -77,7 +83,6 @@
     <filter-name>jersey</filter-name>
     <url-pattern>/*</url-pattern>
   </filter-mapping>
-
   <welcome-file-list>
     <welcome-file>jsp/status.jsp</welcome-file>
   </welcome-file-list>

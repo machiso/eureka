@@ -82,7 +82,7 @@ public class EurekaBootStrap implements ServletContextListener {
 
     protected volatile EurekaServerContext serverContext;
     protected volatile AwsBinder awsBinder;
-    
+
     private EurekaClient eurekaClient;
 
     /**
@@ -91,10 +91,10 @@ public class EurekaBootStrap implements ServletContextListener {
     public EurekaBootStrap() {
         this(null);
     }
-    
+
     /**
      * Construct an instance of eureka bootstrap with the supplied eureka client
-     * 
+     *
      * @param eurekaClient the eureka client to bootstrap
      */
     public EurekaBootStrap(EurekaClient eurekaClient) {
@@ -108,9 +108,24 @@ public class EurekaBootStrap implements ServletContextListener {
      * javax.servlet.ServletContextListener#contextInitialized(javax.servlet.ServletContextEvent)
      */
     @Override
+
+    /**
+     ** Notification that the web application initialization
+     ** process is starting.
+     ** All ServletContextListeners are notified of context
+     ** initialization before any filter or servlet in the web
+     ** application is initialized.
+     */
+
+    // 翻译一下上面那段话：通知web应用初始化过程已经开始了。
+    // 所有的servlet上下文监听器都会在过滤器和servert初始化之前被通知到
     public void contextInitialized(ServletContextEvent event) {
         try {
+
+            //从字面意思可以看出来，这里就是会初始化eureka的整个环境
             initEurekaEnvironment();
+
+            //初始化eurekaServer上下文
             initEurekaServerContext();
 
             ServletContext sc = event.getServletContext();
@@ -127,6 +142,7 @@ public class EurekaBootStrap implements ServletContextListener {
     protected void initEurekaEnvironment() throws Exception {
         logger.info("Setting the eureka configuration..");
 
+        //这里采用了Double check + volatile来实现ConfigurationManager 的一个单例
         String dataCenter = ConfigurationManager.getConfigInstance().getString(EUREKA_DATACENTER);
         if (dataCenter == null) {
             logger.info("Eureka data center value eureka.datacenter is not set, defaulting to default");
@@ -161,10 +177,10 @@ public class EurekaBootStrap implements ServletContextListener {
             EurekaInstanceConfig instanceConfig = isCloud(ConfigurationManager.getDeploymentContext())
                     ? new CloudInstanceConfig()
                     : new MyDataCenterInstanceConfig();
-            
+
             applicationInfoManager = new ApplicationInfoManager(
                     instanceConfig, new EurekaConfigBasedInstanceInfoProvider(instanceConfig).get());
-            
+
             EurekaClientConfig eurekaClientConfig = new DefaultEurekaClientConfig();
             eurekaClient = new DiscoveryClient(applicationInfoManager, eurekaClientConfig);
         } else {
@@ -218,7 +234,7 @@ public class EurekaBootStrap implements ServletContextListener {
         // Register all monitoring statistics.
         EurekaMonitors.registerAllStats();
     }
-    
+
     protected PeerEurekaNodes getPeerEurekaNodes(PeerAwareInstanceRegistry registry, EurekaServerConfig eurekaServerConfig, EurekaClientConfig eurekaClientConfig, ServerCodecs serverCodecs, ApplicationInfoManager applicationInfoManager) {
         PeerEurekaNodes peerEurekaNodes = new PeerEurekaNodes(
                 registry,
@@ -227,7 +243,7 @@ public class EurekaBootStrap implements ServletContextListener {
                 serverCodecs,
                 applicationInfoManager
         );
-        
+
         return peerEurekaNodes;
     }
 

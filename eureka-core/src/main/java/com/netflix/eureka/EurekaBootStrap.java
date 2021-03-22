@@ -161,6 +161,10 @@ public class EurekaBootStrap implements ServletContextListener {
      * init hook for server context. Override for custom logic.
      */
     protected void initEurekaServerContext() throws Exception {
+
+        //通过EurekaServerConfig接口向外提供Eureca-server的配置项，通过默认实现类DefaultEurekaConfig来实现
+        //给各个属性提供了默认值，如果你没有配置的话
+        //和以前通过常量类+属性的方式不同，类似于：xxxConfig.Xxx_Xxx这种方式来获取配置项的值
         EurekaServerConfig eurekaServerConfig = new DefaultEurekaServerConfig();
 
         // For backward compatibility
@@ -171,14 +175,19 @@ public class EurekaBootStrap implements ServletContextListener {
         logger.info(eurekaServerConfig.getJsonCodecName());
         ServerCodecs serverCodecs = new DefaultServerCodecs(eurekaServerConfig);
 
+        //初始化ApplicationInfoManager，这个类是用来进行管理Application（应用的信息）
         ApplicationInfoManager applicationInfoManager = null;
 
         if (eurekaClient == null) {
             EurekaInstanceConfig instanceConfig = isCloud(ConfigurationManager.getDeploymentContext())
                     ? new CloudInstanceConfig()
+                    //初始化eureca-client配置的信息
                     : new MyDataCenterInstanceConfig();
 
+            //通过EurekaInstanceConfig和InstanceInfo来构造ApplicationInfoManager
             applicationInfoManager = new ApplicationInfoManager(
+
+                    //通过构造器模式构造出InstanceInfo实例对象
                     instanceConfig, new EurekaConfigBasedInstanceInfoProvider(instanceConfig).get());
 
             EurekaClientConfig eurekaClientConfig = new DefaultEurekaClientConfig();
@@ -187,6 +196,9 @@ public class EurekaBootStrap implements ServletContextListener {
             applicationInfoManager = eurekaClient.getApplicationInfoManager();
         }
 
+        //内存中的服务实例注册表，真正保存了eureka server中的所有实例的信息
+        //它是一个接口接口，实现类是PeerAwareInstanceRegistryImpl，else逻辑中初始化registry注册表
+        //构造函数中初始化了一些初始参数值
         PeerAwareInstanceRegistry registry;
         if (isAws(applicationInfoManager.getInfo())) {
             registry = new AwsInstanceRegistry(
@@ -206,6 +218,7 @@ public class EurekaBootStrap implements ServletContextListener {
             );
         }
 
+        //代表了eureka server集群,将上面初始化好的注册表作为参数传给集群
         PeerEurekaNodes peerEurekaNodes = getPeerEurekaNodes(
                 registry,
                 eurekaServerConfig,
@@ -214,6 +227,7 @@ public class EurekaBootStrap implements ServletContextListener {
                 applicationInfoManager
         );
 
+        //eureka server集群应用上下文：EurekaServerContext
         serverContext = new DefaultEurekaServerContext(
                 eurekaServerConfig,
                 serverCodecs,
@@ -224,6 +238,8 @@ public class EurekaBootStrap implements ServletContextListener {
 
         EurekaServerContextHolder.initialize(serverContext);
 
+        //真正的逻辑入口，上面的各种操作只是在初始化各种上下文需要的参数，这里才是真正执行逻辑的地方
+        //这里会将eureka集群启动起来，并且会初始化内存注册表
         serverContext.initialize();
         logger.info("Initialized server context");
 

@@ -194,6 +194,7 @@ public class DiscoveryClient implements EurekaClient {
 
     private final Stats stats = new Stats();
 
+    //用于http请求的组件
     private static final class EurekaTransport {
         private ClosableResolver bootstrapResolver;
         private TransportClientFactory transportClientFactory;
@@ -473,6 +474,7 @@ public class DiscoveryClient implements EurekaClient {
         }
 
         // finally, init the schedule tasks (e.g. cluster resolvers, heartbeat, instanceInfo replicator, fetch
+        //初始化所有定时task
         initScheduledTasks();
 
         try {

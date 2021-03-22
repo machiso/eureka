@@ -64,8 +64,14 @@ public class DefaultEurekaServerContext implements EurekaServerContext {
     @Override
     public void initialize() {
         logger.info("Initializing ...");
+
+        //这是是将eureka server启动的入口，里面会初始化一些启动的逻辑，开启一些线程池执行一些定时任务
+        //
         peerEurekaNodes.start();
         try {
+
+            //eureka server初始化的时候会初始化内存注册表
+            //
             registry.init(peerEurekaNodes);
         } catch (Exception e) {
             throw new RuntimeException(e);

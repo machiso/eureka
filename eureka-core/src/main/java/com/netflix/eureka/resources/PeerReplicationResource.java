@@ -75,6 +75,11 @@ public class PeerReplicationResource {
      *            The List of replication events from peer eureka nodes
      * @return A batched response containing the information about the responses of individual events
      */
+
+    //通过这个类的名字，PeerReplication 节点复制，但是后面这个resource是啥玩意
+    //这个方法用来处理从其他eureka nodes的批量复制事件，我的理解是服务注册，心跳等信息
+    //请求参数ReplicationList实际内部包含一个list，List<ReplicationInstance>，
+    //ReplicationInstance：里面包含了实例的各种信息，instanceInfo，Action（此次是什么动作），appName等信息
     @Path("batch")
     @POST
     public Response batchReplication(ReplicationList replicationList) {
@@ -97,6 +102,8 @@ public class PeerReplicationResource {
     }
 
     private ReplicationInstanceResponse dispatch(ReplicationInstance instanceInfo) {
+
+        //这个对象中包含了注册表对象
         ApplicationResource applicationResource = createApplicationResource(instanceInfo);
         InstanceResource resource = createInstanceResource(instanceInfo, applicationResource);
 
@@ -105,6 +112,9 @@ public class PeerReplicationResource {
         String instanceStatus = toString(instanceInfo.getStatus());
 
         Builder singleResponseBuilder = new Builder();
+
+        //通过判断instanceINfo中action，来判断这次请求是属于哪一种。
+        //注册，心跳，取消，状态更新，删除等
         switch (instanceInfo.getAction()) {
             case Register:
                 singleResponseBuilder = handleRegister(instanceInfo, applicationResource);

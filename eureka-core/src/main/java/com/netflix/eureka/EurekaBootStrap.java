@@ -244,6 +244,11 @@ public class EurekaBootStrap implements ServletContextListener {
         logger.info("Initialized server context");
 
         // Copy registry from neighboring eureka node
+        // Populates the registry information from a peer eureka node. This
+        // operation fails over to other nodes until the list is exhausted if the
+        // communication fails.
+        //eureka server在构造DiscoveryClient的时候是不会去抓取注册表的，在配置文件中设置的抓取为false(单节点的时候是不需要注册的，多节点server是需要配置为true的)
+        //会在将eureka集群启动之后，通过synyUp（）方法来进行同步
         int registryCount = registry.syncUp();
         registry.openForTraffic(applicationInfoManager, registryCount);
 

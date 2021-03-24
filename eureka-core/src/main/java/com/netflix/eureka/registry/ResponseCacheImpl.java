@@ -127,8 +127,12 @@ public class ResponseCacheImpl implements ResponseCache {
         this.registry = registry;
 
         long responseCacheUpdateIntervalMs = serverConfig.getResponseCacheUpdateIntervalMs();
+
+        //读写缓存
         this.readWriteCacheMap =
                 CacheBuilder.newBuilder().initialCapacity(serverConfig.getInitialCapacityOfResponseCache())
+
+                        //读写缓存中的数据默认保存180s
                         .expireAfterWrite(serverConfig.getResponseCacheAutoExpirationInSeconds(), TimeUnit.SECONDS)
                         .removalListener(new RemovalListener<Key, Value>() {
                             @Override
@@ -166,6 +170,8 @@ public class ResponseCacheImpl implements ResponseCache {
         }
     }
 
+    //只读缓存，通过这个Timer进行定时刷新
+    //每隔30s就会和读写缓存进行一次比对，如果不一致的话，就将读写缓存中的结果put到只读缓存中去
     private TimerTask getCacheUpdateTask() {
         return new TimerTask() {
             @Override
@@ -205,6 +211,7 @@ public class ResponseCacheImpl implements ResponseCache {
      * @param key the key for which the cached information needs to be obtained.
      * @return payload which contains information about the applications.
      */
+
     public String get(final Key key) {
         return get(key, shouldUseReadOnlyResponseCache);
     }
@@ -352,6 +359,8 @@ public class ResponseCacheImpl implements ResponseCache {
     Value getValue(final Key key, boolean useReadOnlyCache) {
         Value payload = null;
         try {
+            //如果是只读缓存，从只读缓存map中获取
+            //如果只读缓存中为null，则从读写缓存中尝试获取，并且获取之后的结果存入只读缓存
             if (useReadOnlyCache) {
                 final Value currentPayload = readOnlyCacheMap.get(key);
                 if (currentPayload != null) {

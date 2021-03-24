@@ -62,7 +62,13 @@ class InstanceInfoReplicator implements Runnable {
 
     public void start(int initialDelayMs) {
         if (started.compareAndSet(false, true)) {
+
+            //注册的时候将instanceinfo的isInstanceInfoDirty设置为true，默认是false
             instanceInfo.setIsDirty();  // for initial register
+
+            //启动了一个定时任务，将自己放了进入，40s之后执行
+            //InstanceInfoReplicator它自己本身其实就是一个实现了runnable接口的线程
+            //此时应该去看一下run方法的具体实现，里面会有对应的注册的入口
             Future next = scheduler.schedule(this, initialDelayMs, TimeUnit.SECONDS);
             scheduledPeriodicRef.set(next);
         }
@@ -118,6 +124,11 @@ class InstanceInfoReplicator implements Runnable {
 
             Long dirtyTimestamp = instanceInfo.isDirtyWithTime();
             if (dirtyTimestamp != null) {
+                /**
+                 * 这里就是register的入口了，真的太难发现了
+                 * 注册的代码，通过DiscoveryClient中的通信组件EurekaTransport，底层通过jersey框架去向server端发送注册的请求
+                 * 注册完成之后，再将instanceinfo isDirty设置为false
+                 */
                 discoveryClient.register();
                 instanceInfo.unsetIsDirty(dirtyTimestamp);
             }

@@ -70,8 +70,6 @@ public class DefaultEurekaServerContext implements EurekaServerContext {
         peerEurekaNodes.start();
         try {
 
-            //eureka server初始化的时候会初始化内存注册表
-            //
             registry.init(peerEurekaNodes);
         } catch (Exception e) {
             throw new RuntimeException(e);

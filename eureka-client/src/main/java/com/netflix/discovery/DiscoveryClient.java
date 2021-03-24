@@ -402,6 +402,7 @@ public class DiscoveryClient implements EurekaClient {
                             .setDaemon(true)
                             .build());
 
+
             heartbeatExecutor = new ThreadPoolExecutor(
                     1, clientConfig.getHeartbeatExecutorThreadPoolSize(), 0, TimeUnit.SECONDS,
                     new SynchronousQueue<Runnable>(),
@@ -439,6 +440,7 @@ public class DiscoveryClient implements EurekaClient {
 
         if (clientConfig.shouldFetchRegistry()) {
             try {
+                //eureka client初始化的时候，全量拉取注册表
                 boolean primaryFetchRegistryResult = fetchRegistry(false);
                 if (!primaryFetchRegistryResult) {
                     logger.info("Initial registry fetch from primary servers failed");
@@ -997,6 +999,10 @@ public class DiscoveryClient implements EurekaClient {
         try {
             // If the delta is disabled or if it is the first time, get all
             // applications
+            //这个类是eureka client将从eureka server端抓取到的服务注册表缓存在自己本地的一份
+            //打个比方来说，Applications内部包含了一个Map<String, Application> appNameApplicationMap，我的理解是string对应的是服务名，即serviceName
+            //Application内部同样包含了一个map，结构如下：Map<String, InstanceInfo> instancesMap，可以理解为key = instanceId
+            //总之，applications是client缓存在本地的一份服务注册表
             Applications applications = getApplications();
 
             if (clientConfig.shouldDisableDelta()
@@ -1013,10 +1019,16 @@ public class DiscoveryClient implements EurekaClient {
                 logger.info("Registered Applications size is zero : {}",
                         (applications.getRegisteredApplications().size() == 0));
                 logger.info("Application version is -1: {}", (applications.getVersion() == -1));
+                //第一次全量抓取走的是这里，通过字面意思也可以看出来
+                //get并且store保存全量注册表
                 getAndStoreFullRegistry();
             } else {
+                //抓取增量注册表走的是这个逻辑
+                //get并且更新
                 getAndUpdateDelta(applications);
             }
+            //这里将注册表的hash值给保存起来，方便后面增量抓取的时候进行比对
+
             applications.setAppsHashCode(applications.getReconcileHashCode());
             logTotalInstances();
         } catch (Throwable e) {
@@ -1100,6 +1112,8 @@ public class DiscoveryClient implements EurekaClient {
 
         Applications apps = null;
         EurekaHttpResponse<Applications> httpResponse = clientConfig.getRegistryRefreshSingleVipAddress() == null
+
+                //getApplications，这个方法就是去eureka server端获取全量的注册表
                 ? eurekaTransport.queryClient.getApplications(remoteRegionsRef.get())
                 : eurekaTransport.queryClient.getVip(clientConfig.getRegistryRefreshSingleVipAddress(), remoteRegionsRef.get());
         if (httpResponse.getStatusCode() == Status.OK.getStatusCode()) {
@@ -1110,6 +1124,7 @@ public class DiscoveryClient implements EurekaClient {
         if (apps == null) {
             logger.error("The application is null for some reason. Not storing this information");
         } else if (fetchRegistryGeneration.compareAndSet(currentUpdateGeneration, currentUpdateGeneration + 1)) {
+            //这里就是将获取到的注册表保存在client一份
             localRegionApps.set(this.filterAndShuffle(apps));
             logger.debug("Got full registry with apps hashcode {}", apps.getAppsHashCode());
         } else {
@@ -1301,6 +1316,9 @@ public class DiscoveryClient implements EurekaClient {
     private void initScheduledTasks() {
         if (clientConfig.shouldFetchRegistry()) {
             // registry cache refresh timer
+            //注册表缓存刷新timer
+            //30s
+            //每隔30s，client会去增量抓取一次注册表
             int registryFetchIntervalSeconds = clientConfig.getRegistryFetchIntervalSeconds();
             int expBackOffBound = clientConfig.getCacheRefreshExecutorExponentialBackOffBound();
             cacheRefreshTask = new TimedSupervisorTask(
@@ -1317,6 +1335,8 @@ public class DiscoveryClient implements EurekaClient {
                     registryFetchIntervalSeconds, TimeUnit.SECONDS);
         }
 
+        //这里如果说需要向eureka server进行注册的话，就会走这段代码
+        //里面会向eureka server发送register注册的请求
         if (clientConfig.shouldRegisterWithEureka()) {
             int renewalIntervalInSecs = instanceInfo.getLeaseInfo().getRenewalIntervalInSecs();
             int expBackOffBound = clientConfig.getHeartbeatExecutorExponentialBackOffBound();
@@ -1360,6 +1380,8 @@ public class DiscoveryClient implements EurekaClient {
                 applicationInfoManager.registerStatusChangeListener(statusChangeListener);
             }
 
+            //这里就是eureka client启动的时候，向server注册的入口
+            //传了一个40s过去，意思是说40s之后启动一个task，去执行注册等逻辑
             instanceInfoReplicator.start(clientConfig.getInitialInstanceInfoReplicationIntervalSeconds());
         } else {
             logger.info("Not registering with Eureka server per configuration");

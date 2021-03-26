@@ -589,6 +589,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
     public void evict(long additionalLeaseMs) {
         logger.debug("Running the evict task");
 
+        //这里的逻辑和server的自我保护机制相关
         if (!isLeaseExpirationEnabled()) {
             logger.debug("DS: lease expiration is currently disabled.");
             return;
@@ -603,6 +604,9 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
             if (leaseMap != null) {
                 for (Entry<String, Lease<InstanceInfo>> leaseEntry : leaseMap.entrySet()) {
                     Lease<InstanceInfo> lease = leaseEntry.getValue();
+                    //这里就会判断说对每一个实例进行遍历，拿到租约信息，然后会做一个判断
+                    //这里的additionalLeaseMs = 补偿时间，就是上面那个地方计算出来的值
+                    //如果说超过一定时间没有发送心跳过来的话，就会将当前的实例加入list中，代表将要下线的实例
                     if (lease.isExpired(additionalLeaseMs) && lease.getHolder() != null) {
                         expiredLeases.add(lease);
                     }
@@ -612,6 +616,16 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
 
         // To compensate for GC pauses or drifting local time, we need to use current registry size as a base for
         // triggering self-preservation. Without that we would wipe out full registry.
+
+        /**
+         * 服务实例下线，不是说一次性就把全部的实例都给下线的
+         * registrySize：当前服务注册表的实例总数，打个比方，此时是20
+         * registrySizeThreshold：当前实例总数*0.85，得到一个值，及20*0。85 = 17
+         * evictionLimit = 20-17 = 3，即使你当前宕机了7台机器，也不能一次性全部下线。也只能部分下线toEvict的机器数
+         *
+         * --部分下线机制
+         * --随机下线机制
+         */
         int registrySize = (int) getLocalRegistrySize();
         int registrySizeThreshold = (int) (registrySize * serverConfig.getRenewalPercentThreshold());
         int evictionLimit = registrySize - registrySizeThreshold;
@@ -631,6 +645,9 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
                 String id = lease.getHolder().getId();
                 EXPIRED.increment();
                 logger.warn("DS: Registry: expired lease for {}/{}", appName, id);
+
+                //摘除服务实例，走的就是服务下线的逻辑
+                //注册表，recentlychangedqueue，invalidate缓存
                 internalCancel(appName, id, false);
             }
         }
@@ -1246,6 +1263,8 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
         @Override
         public void run() {
             try {
+
+                //补偿时间
                 long compensationTimeMs = getCompensationTimeMs();
                 logger.info("Running the evict task with compensationTime {}ms", compensationTimeMs);
                 evict(compensationTimeMs);
@@ -1259,6 +1278,15 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
          * vs the configured amount of time for execution. This is useful for cases where changes in time (due to
          * clock skew or gc for example) causes the actual eviction task to execute later than the desired time
          * according to the configured cycle.
+         */
+
+        /**
+         * 1、获取当前时间
+         * 2、将当前时间set到lastExecutionNanosRef，并且获取到上一次的时间
+         * 3、计算出当前时间和上一次执行时间的差值，并且减去默认的task间隔时间60s，得到compensationTime
+         * 4、如果补偿时间小于等于0，一般情况下正常的话应该是等于0，如果大于0的话，说明server执行这个定时job的时间延迟了，导致当前时间太大，那么此时
+         * 就返回补偿时间就可以了
+         * @return
          */
         long getCompensationTimeMs() {
             long currNanos = getCurrentTimeNano();

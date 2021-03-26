@@ -59,6 +59,9 @@ public class Lease<T> {
      * associated {@link T} during registration, otherwise default duration is
      * {@link #DEFAULT_DURATION_IN_SECS}.
      */
+
+    //这个地方应该是有问题的
+    //renew 的话，应该只要更新为当前时间就可以了，这个地方不应该加上duration
     public void renew() {
         lastUpdateTimestamp = System.currentTimeMillis() + duration;
 
@@ -106,6 +109,20 @@ public class Lease<T> {
      * not be fixed.
      *
      * @param additionalLeaseMs any additional lease time to add to the lease evaluation in ms.
+     */
+
+    /**
+     * 这个地方其实是有一个bug的，但是看注释，eureka官方是不打算修复这个bug了
+     * 按照正常的逻辑来说，这个地方应该只是需要判断当前的时间>上一次心跳续约时间+间隔时间90s+补偿时间
+     * lastUpdateTimestamp：这个值，renew 的时候多加了一个duration过来，会导致这里的逻辑变成这样子：
+     * System.currentTimeMillis() > (lastUpdateTimestamp + duration + duration + additionalLeaseMs))
+     *
+     * 打个比方来说，client来进行续约，当前时间是8：30:00，那么续约之后，lastUpdateTimestamp就变成了8：31：30，但是这里的逻辑又加了一个duration，又加了一个90s,
+     * 变成了8：33：00，加上补偿时间，算0吧，那么当前时间至少要8：33分才返回true
+     * 返回true，表示这个实例心跳超过了180s没有发送过来，才会将实例摘除
+     * 但是eureka官方说明超过90s没有发送心跳过来就会下线服务，但是代码中却要180s才会将服务下线，90s-180s这个时间是不会下线的。
+     *
+     * 这个地方要注意，会成为面试时候的一个亮点
      */
     public boolean isExpired(long additionalLeaseMs) {
         return (evictionTimestamp > 0 || System.currentTimeMillis() > (lastUpdateTimestamp + duration + additionalLeaseMs));

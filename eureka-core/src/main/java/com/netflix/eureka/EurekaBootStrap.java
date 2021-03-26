@@ -250,6 +250,9 @@ public class EurekaBootStrap implements ServletContextListener {
         //eureka server在构造DiscoveryClient的时候是不会去抓取注册表的，在配置文件中设置的抓取为false(单节点的时候是不需要注册的，多节点server是需要配置为true的)
         //会在将eureka集群启动之后，通过synyUp（）方法来进行同步
         int registryCount = registry.syncUp();
+
+        //这里是server定时扫描那些服务超过时间没有发送心跳过来
+        //决定是否下线还是进入自我保护机制
         registry.openForTraffic(applicationInfoManager, registryCount);
 
         // Register all monitoring statistics.

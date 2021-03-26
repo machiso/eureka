@@ -482,10 +482,19 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
 
     @Override
     public boolean isLeaseExpirationEnabled() {
+
+        //这里是否开启了自我保护机制，默认是true
+        //1、如果是默认值true，自我保护机制开启，那么这个地方就会继续往下走
+        //2、如果关闭自我保护机制，那么就直接返回return true。按道理来说，关闭了自我保护机制，就不会判断收到的心跳数和期望的心跳数的大小比较
+        //而是有故障的服务实例就给下线了，因为你关闭了自我保护机制，就不会做一个判断了
         if (!isSelfPreservationModeEnabled()) {
             // The self preservation mode is disabled, hence allowing the instances to expire.
             return true;
         }
+
+        /**
+         *
+         */
         return numberOfRenewsPerMinThreshold > 0 && getNumOfRenewsInLastMin() > numberOfRenewsPerMinThreshold;
     }
 

@@ -1148,6 +1148,13 @@ public class DiscoveryClient implements EurekaClient {
     private void getAndUpdateDelta(Applications applications) throws Throwable {
         long currentUpdateGeneration = fetchRegistryGeneration.get();
 
+        /**
+         * 1、从eureka server拉取增量注册表，返回最近3分钟内有变更的实例列表以及server最新服务列表的hash值
+         * 2、如果从server返回为空，那么就重新拉取一份全量注册表，并且保存到本地
+         * 3、更新本地的注册表（增删改）,和server端拉取的结果进行合并
+         * 4、合并之后的注册表计算hash值，和server端获取的进行对比；如果两者相同，则认为当前的client端注册表和server端一致，如果
+         * 不一样，就重新到server端拉取全量注册表
+         */
         Applications delta = null;
         EurekaHttpResponse<Applications> httpResponse = eurekaTransport.queryClient.getDelta(remoteRegionsRef.get());
         if (httpResponse.getStatusCode() == Status.OK.getStatusCode()) {

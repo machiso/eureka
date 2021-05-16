@@ -265,6 +265,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
 
             //server端成功注册之后，将读写缓存中的注册表过期
             //不论是增加实例，下线实例，还是实例宕机，都会主动过期读写缓冲中的数据表
+            //demo test
             invalidateCache(registrant.getAppName(), registrant.getVIPAddress(), registrant.getSecureVipAddress());
             logger.info("Registered instance {}/{} with status {} (replication={})",
                     registrant.getAppName(), registrant.getId(), registrant.getStatus(), isReplication);

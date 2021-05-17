@@ -79,6 +79,10 @@ public class DefaultEurekaServerContext implements EurekaServerContext {
 
     @PreDestroy
     @Override
+
+    /**
+     * PreDestroy：在容器销毁之前会完成这些操作
+     */
     public void shutdown() {
         logger.info("Shutting down ...");
         registry.shutdown();

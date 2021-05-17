@@ -128,7 +128,11 @@ public class ResponseCacheImpl implements ResponseCache {
 
         long responseCacheUpdateIntervalMs = serverConfig.getResponseCacheUpdateIntervalMs();
 
-        //读写缓存
+        /**
+         * 读写缓存
+         * 1、主动过期：定时任务，每隔180s主动过期读写缓存
+         * 2、被动过期：当有新的服务注册，下线，宕机之后，会主动过期读写缓存
+         */
         this.readWriteCacheMap =
                 CacheBuilder.newBuilder().initialCapacity(serverConfig.getInitialCapacityOfResponseCache())
 
@@ -170,8 +174,10 @@ public class ResponseCacheImpl implements ResponseCache {
         }
     }
 
-    //只读缓存，通过这个Timer进行定时刷新
-    //每隔30s就会和读写缓存进行一次比对，如果不一致的话，就将读写缓存中的结果put到只读缓存中去
+    /**
+     * 只读缓存，通过这个Timer进行定时刷新
+     * 每隔30s就会和读写缓存进行一次比对，如果不一致的话，就将读写缓存中的结果put到只读缓存中去
+     */
     private TimerTask getCacheUpdateTask() {
         return new TimerTask() {
             @Override

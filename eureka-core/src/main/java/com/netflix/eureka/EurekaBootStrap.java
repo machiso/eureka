@@ -196,9 +196,11 @@ public class EurekaBootStrap implements ServletContextListener {
             applicationInfoManager = eurekaClient.getApplicationInfoManager();
         }
 
-        //内存中的服务实例注册表，真正保存了eureka server中的所有实例的信息
-        //它是一个接口接口，实现类是PeerAwareInstanceRegistryImpl，else逻辑中初始化registry注册表
-        //构造函数中初始化了一些初始参数值
+        /**
+         * 内存中的服务实例注册表，真正保存了eureka server中的所有实例的信息
+         * 它是一个接口接口，实现类是PeerAwareInstanceRegistryImpl，else逻辑中初始化registry注册表
+         * 构造函数中初始化了一些初始参数值
+         */
         PeerAwareInstanceRegistry registry;
         if (isAws(applicationInfoManager.getInfo())) {
             registry = new AwsInstanceRegistry(
@@ -251,8 +253,8 @@ public class EurekaBootStrap implements ServletContextListener {
         //会在将eureka集群启动之后，通过synyUp（）方法来进行同步
         int registryCount = registry.syncUp();
 
-        //这里是server定时扫描那些服务超过时间没有发送心跳过来
-        //决定是否下线还是进入自我保护机制
+        //这里是server定时扫描那些服务超过时间没有发送心跳过来，有问题的实例进行故障实例摘除
+        //如果开启了自我保护机制，则不会下线服务
         registry.openForTraffic(applicationInfoManager, registryCount);
 
         // Register all monitoring statistics.
@@ -275,6 +277,10 @@ public class EurekaBootStrap implements ServletContextListener {
      * Handles Eureka cleanup, including shutting down all monitors and yielding all EIPs.
      *
      * @see javax.servlet.ServletContextListener#contextDestroyed(javax.servlet.ServletContextEvent)
+     */
+
+    /**
+     * 服务实例下线，会走监听器的这个方法
      */
     @Override
     public void contextDestroyed(ServletContextEvent event) {

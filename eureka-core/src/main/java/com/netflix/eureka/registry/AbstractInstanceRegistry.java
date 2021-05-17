@@ -190,6 +190,15 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
      *
      * @see com.netflix.eureka.lease.LeaseManager#register(java.lang.Object, int, boolean)
      */
+
+    /**
+     * 服务注册的流程
+     * 1、将当前的服务实例添加到注册表中去
+     * 2、将当前服务实例中的服务实例数+1，同时更新每分钟期望收到的心跳次数
+     * 3、recentRegisteredQueue：添加到queue中
+     * 4、recentlyChangedQueue
+     * 5、过期缓存
+     */
     public void register(InstanceInfo registrant, int leaseDuration, boolean isReplication) {
         read.lock();
         try {
@@ -298,6 +307,17 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
      * cancel request is replicated to the peers. This is however not desired for expires which would be counted
      * in the remote peers as valid cancellations, so self preservation mode would not kick-in.
      */
+
+    /**
+     * server服务下线的流程：
+     * 0、将服务实例从注册表中移除
+     * 1、将服务实例添加到recentCanceledQueue中
+     * 2、将服务实例封装成RecentlyChangedItem对象添加到recentlyChangedQueue中
+     * 3、invalidateCache：将缓存中的数据全部清楚
+     * 4、expectedNumberOfClientsSendingRenews：将需要发送心跳的服务实例数-1
+     * 5、更新每分钟期望获得的心跳的次数
+     *
+     */
     protected boolean internalCancel(String appName, String id, boolean isReplication) {
         read.lock();
         try {
@@ -317,6 +337,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
                 logger.warn("DS: Registry: cancel failed because Lease is not registered for: {}/{}", appName, id);
                 return false;
             } else {
+                //服务实例下线的时间戳
                 leaseToCancel.cancel();
                 InstanceInfo instanceInfo = leaseToCancel.getHolder();
                 String vip = null;

@@ -62,6 +62,7 @@ public class Lease<T> {
 
     //这个地方应该是有问题的
     //renew 的话，应该只要更新为当前时间就可以了，这个地方不应该加上duration
+    //导致后面自我保护机制那个地方，实际上是累加了两次duration值
     public void renew() {
         lastUpdateTimestamp = System.currentTimeMillis() + duration;
 

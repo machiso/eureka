@@ -613,6 +613,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
 
         //这里的逻辑和server的自我保护机制相关
         if (!isLeaseExpirationEnabled()) {
+            //如果打开了自我保护机制，并且每分钟的心跳次数小于期望心跳次数，则进入自我保护机制，直接return
             logger.debug("DS: lease expiration is currently disabled.");
             return;
         }

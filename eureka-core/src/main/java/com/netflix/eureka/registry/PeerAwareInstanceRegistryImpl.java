@@ -489,12 +489,12 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
         //而是有故障的服务实例就给下线了，因为你关闭了自我保护机制，就不会做一个判断了
         if (!isSelfPreservationModeEnabled()) {
             // The self preservation mode is disabled, hence allowing the instances to expire.
+            //关闭了自我保护机制，返回true
             return true;
         }
 
-        /**
-         *
-         */
+        //默认开启了自我保护机制
+        //判断需要进行心跳发送的实例个数，以及上一分钟发送的心跳次数是否大于期望的心跳次数
         return numberOfRenewsPerMinThreshold > 0 && getNumOfRenewsInLastMin() > numberOfRenewsPerMinThreshold;
     }
 

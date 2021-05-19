@@ -102,6 +102,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
     private final AtomicReference<EvictionTask> evictionTaskRef = new AtomicReference<EvictionTask>();
 
     protected String[] allKnownRemoteRegions = EMPTY_STR_ARRAY;
+    //每分钟期望的心跳次数
     protected volatile int numberOfRenewsPerMinThreshold;
     protected volatile int expectedNumberOfClientsSendingRenews;
 
@@ -274,7 +275,6 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
 
             //server端成功注册之后，将读写缓存中的注册表过期
             //不论是增加实例，下线实例，还是实例宕机，都会主动过期读写缓冲中的数据表
-            //demo test
             invalidateCache(registrant.getAppName(), registrant.getVIPAddress(), registrant.getSecureVipAddress());
             logger.info("Registered instance {}/{} with status {} (replication={})",
                     registrant.getAppName(), registrant.getId(), registrant.getStatus(), isReplication);
@@ -621,6 +621,8 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
         // We collect first all expired items, to evict them in random order. For large eviction sets,
         // if we do not that, we might wipe out whole apps before self preservation kicks in. By randomizing it,
         // the impact should be evenly distributed across all applications.
+
+        //只有关闭了自我保护机制，并且收到的心跳请求次数小于期望次数，代码才会执行到这里
         List<Lease<InstanceInfo>> expiredLeases = new ArrayList<>();
         for (Entry<String, Map<String, Lease<InstanceInfo>>> groupEntry : registry.entrySet()) {
             Map<String, Lease<InstanceInfo>> leaseMap = groupEntry.getValue();

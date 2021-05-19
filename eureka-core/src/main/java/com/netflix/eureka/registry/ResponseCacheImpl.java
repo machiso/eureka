@@ -164,6 +164,7 @@ public class ResponseCacheImpl implements ResponseCache {
             timer.schedule(getCacheUpdateTask(),
                     new Date(((System.currentTimeMillis() / responseCacheUpdateIntervalMs) * responseCacheUpdateIntervalMs)
                             + responseCacheUpdateIntervalMs),
+                    //responseCacheUpdateIntervalMs 默认30s
                     responseCacheUpdateIntervalMs);
         }
 

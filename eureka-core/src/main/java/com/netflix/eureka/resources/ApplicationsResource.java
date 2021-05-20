@@ -196,6 +196,8 @@ public class ApplicationsResource {
      * @return response containing the delta information of the
      *         {@link AbstractInstanceRegistry}.
      */
+
+    //增量抓取注册表
     @Path("delta")
     @GET
     public Response getContainerDifferential(
@@ -230,6 +232,7 @@ public class ApplicationsResource {
             returnMediaType = MediaType.APPLICATION_XML;
         }
 
+        //ALL_APPS_DELTA 增量注册表
         Key cacheKey = new Key(Key.EntityType.Application,
                 ResponseCacheImpl.ALL_APPS_DELTA,
                 keyType, CurrentRequestVersion.get(), EurekaAccept.fromString(eurekaAccept), regions

@@ -137,6 +137,7 @@ public class ResponseCacheImpl implements ResponseCache {
                 CacheBuilder.newBuilder().initialCapacity(serverConfig.getInitialCapacityOfResponseCache())
 
                         //读写缓存中的数据默认保存180s
+                        //主动过期的时间
                         .expireAfterWrite(serverConfig.getResponseCacheAutoExpirationInSeconds(), TimeUnit.SECONDS)
                         .removalListener(new RemovalListener<Key, Value>() {
                             @Override
@@ -150,6 +151,7 @@ public class ResponseCacheImpl implements ResponseCache {
                         })
                         .build(new CacheLoader<Key, Value>() {
                             @Override
+                            //如果读写缓存中也获取不到注册表，走这段逻辑
                             public Value load(Key key) throws Exception {
                                 if (key.hasRegions()) {
                                     Key cloneWithNoRegions = key.cloneWithoutRegions();
@@ -160,6 +162,9 @@ public class ResponseCacheImpl implements ResponseCache {
                             }
                         });
 
+        /**
+         * 只读缓存，每隔30s就会和读写缓存进行一次比对，如果不一致的话，就将读写缓存中的结果put到只读缓存中去
+         */
         if (shouldUseReadOnlyResponseCache) {
             timer.schedule(getCacheUpdateTask(),
                     new Date(((System.currentTimeMillis() / responseCacheUpdateIntervalMs) * responseCacheUpdateIntervalMs)
@@ -431,6 +436,7 @@ public class ResponseCacheImpl implements ResponseCache {
                 case Application:
                     boolean isRemoteRegionRequested = key.hasRegions();
 
+                    //全量拉取，从registry注册表中获取
                     if (ALL_APPS.equals(key.getName())) {
                         if (isRemoteRegionRequested) {
                             tracer = serializeAllAppsWithRemoteRegionTimer.start();
@@ -439,6 +445,8 @@ public class ResponseCacheImpl implements ResponseCache {
                             tracer = serializeAllAppsTimer.start();
                             payload = getPayLoad(key, registry.getApplications());
                         }
+
+                     //增量拉取，从recentlyChangedQueue中获取
                     } else if (ALL_APPS_DELTA.equals(key.getName())) {
                         if (isRemoteRegionRequested) {
                             tracer = serializeDeltaAppsWithRemoteRegionTimer.start();

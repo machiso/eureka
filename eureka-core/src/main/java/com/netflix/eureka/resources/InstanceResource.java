@@ -102,6 +102,8 @@ public class InstanceResource {
      * @return response indicating whether the operation was a success or
      *         failure.
      */
+
+    //服务续约
     @PUT
     public Response renewLease(
             @HeaderParam(PeerEurekaNode.HEADER_REPLICATION) String isReplication,
@@ -274,6 +276,8 @@ public class InstanceResource {
      * @return response indicating whether the operation was a success or
      *         failure.
      */
+
+    //服务下线
     @DELETE
     public Response cancelLease(
             @HeaderParam(PeerEurekaNode.HEADER_REPLICATION) String isReplication) {

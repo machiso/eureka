@@ -123,6 +123,8 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
 
         this.renewsLastMin = new MeasuredRate(1000 * 60 * 1);
 
+        //每隔30s，会对recentlyChangedQueue队列做一个扫描
+        //如果一个服务变更的时间超过了3分钟，就将变更记录从队列中移除
         this.deltaRetentionTimer.schedule(getDeltaRetentionTask(),
                 serverConfig.getDeltaRetentionTimerIntervalInMs(),
                 serverConfig.getDeltaRetentionTimerIntervalInMs());
@@ -349,6 +351,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
                     vip = instanceInfo.getVIPAddress();
                     svip = instanceInfo.getSecureVipAddress();
                 }
+                //过期缓存
                 invalidateCache(appName, vip, svip);
                 logger.info("Cancelled instance {}/{} (replication={})", appName, id, isReplication);
             }
@@ -356,6 +359,9 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
             read.unlock();
         }
 
+
+        //更新每分钱期望的心跳次数
+        //这里为啥要使用synchronized的呢?因为这里可能有别的服务示例上线/下线。这里必须用锁保护起来，保证数据安全性
         synchronized (lock) {
             if (this.expectedNumberOfClientsSendingRenews > 0) {
                 // Since the client wants to cancel it, reduce the number of clients to send renews.
@@ -1230,6 +1236,8 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
         responseCache.invalidate(appName, vipAddress, secureVipAddress);
     }
 
+    //每分钟期望的心跳次数 = 期望发送心跳的实例 * （60s / 心跳间隔时间） * 百分比（默认85%）
+    //例如有20个实例，每隔10秒钟发送一次心跳，那么一分钟期望的心跳次数为：20 * （60/10） * 0.85 = 120 * 0.85 = 102次
     protected void updateRenewsPerMinThreshold() {
         this.numberOfRenewsPerMinThreshold = (int) (this.expectedNumberOfClientsSendingRenews
                 * (60.0 / serverConfig.getExpectedClientRenewalIntervalSeconds())
